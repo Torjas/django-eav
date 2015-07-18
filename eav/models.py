@@ -43,11 +43,13 @@ from django.contrib.contenttypes import generic
 from django.contrib.sites.models import Site
 from django.contrib.sites.managers import CurrentSiteManager
 from django.conf import settings
+from django.utils.encoding import python_2_unicode_compatible
 
 from .validators import *
 from .fields import EavSlugField, EavDatatypeField
 
 
+@python_2_unicode_compatible
 class EnumValue(models.Model):
     '''
     *EnumValue* objects are the value 'choices' to multiple choice
@@ -80,10 +82,11 @@ class EnumValue(models.Model):
     value = models.CharField(_(u"value"), db_index=True,
                              unique=True, max_length=50)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.value
 
 
+@python_2_unicode_compatible
 class EnumGroup(models.Model):
     '''
     *EnumGroup* objects have two fields- a *name* ``CharField`` and *enums*,
@@ -97,10 +100,11 @@ class EnumGroup(models.Model):
 
     enums = models.ManyToManyField(EnumValue, verbose_name=_(u"enum group"))
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class Attribute(models.Model):
     '''
     Putting the **A** in *EAV*. This holds the attributes, or concepts.
@@ -180,11 +184,11 @@ class Attribute(models.Model):
                              default=Site.objects.get_current)
 
     slug = EavSlugField(_(u"slug"), max_length=50, db_index=True,
-                          help_text=_(u"Short unique attribute label"))
+                        help_text=_(u"Short unique attribute label"))
 
     description = models.CharField(_(u"description"), max_length=256,
-                                     blank=True, null=True,
-                                     help_text=_(u"Short description"))
+                                   blank=True, null=True,
+                                   help_text=_(u"Short description"))
 
     enum_group = models.ForeignKey(EnumGroup, verbose_name=_(u"choice group"),
                                    blank=True, null=True)
@@ -242,7 +246,7 @@ class Attribute(models.Model):
             if value not in self.enum_group.enums.all():
                 raise ValidationError(_(u"%(enum)s is not a valid choice "
                                         u"for %(attr)s") % \
-                                       {'enum': value, 'attr': self})
+                                      {'enum': value, 'attr': self})
 
     def save(self, *args, **kwargs):
         '''
@@ -311,10 +315,11 @@ class Attribute(models.Model):
             value_obj.value = value
             value_obj.save()
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s (%s)" % (self.name, self.get_datatype_display())
 
 
+@python_2_unicode_compatible
 class Value(models.Model):
     '''
     Putting the **V** in *EAV*. This model stores the value for one particular
@@ -373,12 +378,12 @@ class Value(models.Model):
         and value_enum is not a valid choice for this value's attribute.
         '''
         if self.attribute.datatype == Attribute.TYPE_ENUM and \
-           self.value_enum:
+                self.value_enum:
             if self.value_enum not in self.attribute.enum_group.enums.all():
-                raise ValidationError(_(u"%(choice)s is not a valid " \
+                raise ValidationError(_(u"%(choice)s is not a valid "
                                         u"choice for %s(attribute)") % \
-                                        {'choice': self.value_enum,
-                                         'attribute': self.attribute})
+                                      {'choice': self.value_enum,
+                                       'attribute': self.attribute})
 
     def _get_value(self):
         '''
@@ -394,7 +399,7 @@ class Value(models.Model):
 
     value = property(_get_value, _set_value)
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s - %s: \"%s\"" % (self.entity, self.attribute.name,
                                      self.value)
 
@@ -482,20 +487,20 @@ class Entity(object):
                 value = self._getattr(attribute.slug)
             else:
                 value = values_dict.get(attribute.slug, None)
-            
+
             if value is None:
                 if attribute.required:
                     raise ValidationError(_(u"%(attr)s EAV field cannot " \
-                                                u"be blank") % \
-                                              {'attr': attribute.slug})
+                                            u"be blank") % \
+                                          {'attr': attribute.slug})
             else:
                 try:
                     attribute.validate_value(value)
                 except ValidationError as e:
                     raise ValidationError(_(u"%(attr)s EAV field %(err)s") % \
-                                              {'attr': attribute.slug,
-                                               'err': e})
-                
+                                          {'attr': attribute.slug,
+                                           'err': e})
+
     def get_values_dict(self):
         values_dict = dict()
         for value in self.get_values():
@@ -558,6 +563,7 @@ class Entity(object):
         instance = kwargs['instance']
         entity = getattr(kwargs['instance'], instance._eav_config_cls.eav_attr)
         entity.validate_attributes()
+
 
 if 'django_nose' in settings.INSTALLED_APPS:
     '''
